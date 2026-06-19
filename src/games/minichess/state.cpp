@@ -71,9 +71,9 @@ int State::evaluate(
 
     // [ Hackathon TODO 1-1 ]
     // if in win state, return max score(you can check base_state.hpp for max score)
-    //if (game_state == WIN) {
-    //    return P_MAX;
-    //}
+    if (game_state == WIN) {
+        return P_MAX;
+    }
 
     auto self_board = this->board.board[this->player];
     auto oppn_board = this->board.board[1 - this->player];
