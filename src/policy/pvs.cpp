@@ -1,12 +1,12 @@
 #include <utility>
 #include "state.hpp"
-#include "alphabeta.hpp"
-#include "minimax.hpp"   // 用 MMParams
+#include "pvs.hpp"
+#include "minimax.hpp"
 
 /*============================================================
- * AlphaBeta — eval_ctx
+ * PVS — eval_ctx
  *============================================================*/
-int AlphaBeta::eval_ctx(
+int PVS::eval_ctx(
     State *state,
     int depth,
     int alpha,
@@ -57,25 +57,61 @@ int AlphaBeta::eval_ctx(
     /* === Negamax loop === */
     int best_score = M_MAX;
 
+    // 加入 first flag
+    bool first = true;
+
     for(auto& action : state->legal_actions){
         State* next = state->next_state(action);
 
         bool same = next->same_player_as_parent();
 
-        int raw = eval_ctx(
-            next,
-            depth - 1,
-            -beta,
-            -alpha,
-            history,
-            ply + 1,
-            ctx,
-            p
-        );
+        int raw;
+        // 第一個 move 正常
+        if(first){
+            raw = eval_ctx(
+                next,
+                depth - 1,
+                -beta,
+                -alpha,
+                history,
+                ply + 1,
+                ctx,
+                p
+            );
+            first = false;
+        }
+        else{
+            // 先做「null window search」
+            raw = eval_ctx(
+                next,
+                depth - 1,
+                -alpha - 1,   // ⭐ 關鍵
+                -alpha,
+                history,
+                ply + 1,
+                ctx,
+                p
+            );
+
+            // 可能變好才重算
+            if(raw > alpha){
+                raw = eval_ctx(
+                    next,
+                    depth - 1,
+                    -beta,
+                    -alpha,
+                    history,
+                    ply + 1,
+                    ctx,
+                    p
+                );
+            }
+        }
 
         int score;
         if(same) score = raw;
         else score = -raw;
+
 
         delete next;
 
@@ -83,12 +119,10 @@ int AlphaBeta::eval_ctx(
             best_score = score;
         }
 
-        /* Alpha update */
         if(score > alpha){
             alpha = score;
         }
 
-        /* pruning（唯一新東西）*/
         if(alpha >= beta){
             break;
         }
@@ -99,9 +133,9 @@ int AlphaBeta::eval_ctx(
 }
 
 /*============================================================
- * AlphaBeta — search
+ * PVS — search
  *============================================================*/
-SearchResult AlphaBeta::search(
+SearchResult PVS::search(
     State *state,
     int depth,
     GameHistory& history,
@@ -158,9 +192,9 @@ SearchResult AlphaBeta::search(
 }
 
 /*============================================================
- * AlphaBeta — default_params / param_defs
+ * PVS — default_params / param_defs
  *============================================================*/
-ParamMap AlphaBeta::default_params(){
+ParamMap PVS::default_params(){
     return {
         {"UseKPEval", "true"},
         {"UseEvalMobility", "true"},
@@ -168,7 +202,7 @@ ParamMap AlphaBeta::default_params(){
     };
 }
 
-std::vector<ParamDef> AlphaBeta::param_defs(){
+std::vector<ParamDef> PVS::param_defs(){
     return {
         {"UseKPEval", ParamDef::CHECK, "true"},
         {"UseEvalMobility", ParamDef::CHECK, "true"},
