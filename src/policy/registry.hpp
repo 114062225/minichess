@@ -18,6 +18,7 @@
 #include "alphabeta.hpp"
 #include "pvs.hpp"
 #include "quiescence.hpp"
+#include "submission.hpp"
 
 struct AlgoEntry {
     std::string name;
@@ -66,6 +67,14 @@ inline const std::vector<AlgoEntry>& get_algo_table(){
             Quiescence::param_defs(),
             [](State* s, int d, GameHistory& h, SearchContext& c){
                 return Quiescence::search(s, d, h, c);
+            }
+        },
+        {
+            "submission",
+            Submission::default_params(),
+            Submission::param_defs(),
+            [](State* s, int d, GameHistory& h, SearchContext& c){
+                return Submission::search(s, d, h, c);
             }
         },
     };
