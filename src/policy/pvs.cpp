@@ -60,12 +60,24 @@ int PVS::eval_ctx(
     // 加入 first flag
     bool first = true;
 
+    auto is_capture = [&](const Move& m){
+        auto [from, to] = m;
+        return state->piece_at(1 - state->player, to.first, to.second) != 0;
+    };
+
+    std::sort(state->legal_actions.begin(), state->legal_actions.end(),
+        [&](const Move& a, const Move& b){
+            return is_capture(a) > is_capture(b);
+        }
+    );
+
+
     for(auto& action : state->legal_actions){
         State* next = state->next_state(action);
 
         bool same = next->same_player_as_parent();
 
-        int raw;
+        int raw, score;
         // 第一個 move 正常
         if(first){
             raw = eval_ctx(
@@ -78,6 +90,8 @@ int PVS::eval_ctx(
                 ctx,
                 p
             );
+            if(same) score = raw;
+            else score = -raw;
             first = false;
         }
         else{
@@ -92,9 +106,11 @@ int PVS::eval_ctx(
                 ctx,
                 p
             );
+            if(same) score = raw;
+            else score = -raw;
 
             // 可能變好才重算
-            if(raw > alpha){
+            if(score > alpha){
                 raw = eval_ctx(
                     next,
                     depth - 1,
@@ -105,13 +121,10 @@ int PVS::eval_ctx(
                     ctx,
                     p
                 );
+                if(same) score = raw;
+                else score = -raw;
             }
         }
-
-        int score;
-        if(same) score = raw;
-        else score = -raw;
-
 
         delete next;
 
