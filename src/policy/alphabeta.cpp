@@ -4,7 +4,7 @@
 #include "minimax.hpp"   // 用 MMParams
 
 /*============================================================
- * AlphaBeta — eval_ctx (從 minimax 改)
+ * AlphaBeta — eval_ctx
  *============================================================*/
 int AlphaBeta::eval_ctx(
     State *state,
@@ -24,12 +24,12 @@ int AlphaBeta::eval_ctx(
         return 0;
     }
 
-    /* lazy move gen */
+    /* === Lazy move generation (sets game_state) === */
     if(state->legal_actions.empty() && state->game_state == UNKNOWN){
         state->get_legal_actions();
     }
 
-    /* terminal */
+    /* === Terminal / leaf checks === */
     if(state->game_state == WIN){
         return P_MAX - ply;
     }
@@ -38,6 +38,7 @@ int AlphaBeta::eval_ctx(
         return 0;
     }
 
+    /* === Repetition check (game-specific) === */
     int rep_score;
     if(state->check_repetition(history, rep_score)){
         return rep_score;
@@ -53,12 +54,15 @@ int AlphaBeta::eval_ctx(
         return score;
     }
 
-    int best = M_MAX;
+    /* === Negamax loop === */
+    int best_score = M_MAX;
 
     for(auto& action : state->legal_actions){
         State* next = state->next_state(action);
 
-        int score = -eval_ctx(
+        bool same = next->same_player_as_parent();
+
+        int raw = eval_ctx(
             next,
             depth - 1,
             -beta,
@@ -69,28 +73,36 @@ int AlphaBeta::eval_ctx(
             p
         );
 
+        int score;
+        if(same) score = raw;
+        else score = -raw;
+
         delete next;
 
-        /* 和 minimax 一樣 */
-        if(score > best){
-            best = score;
+        if(score > best_score){
+            best_score = score;
         }
 
-        /* ✅ Alpha update */
+        /* Alpha update */
         if(score > alpha){
             alpha = score;
         }
 
-        /* ✅ pruning（唯一新東西）*/
+        /* pruning（唯一新東西）*/
         if(alpha >= beta){
             break;
         }
     }
 
     history.pop(state->hash());
-    return best;
+    return best_score;
 }
 
+/*============================================================
+ * AlphaBeta — search
+ *
+ * Iterate legal moves, call eval_ctx, return SearchResult.
+ *============================================================*/
 SearchResult AlphaBeta::search(
     State *state,
     int depth,
@@ -99,7 +111,6 @@ SearchResult AlphaBeta::search(
 ){
     ctx.reset();
     MMParams p = MMParams::from_map(ctx.params);
-
     SearchResult result;
     result.depth = depth;
 
@@ -107,10 +118,14 @@ SearchResult AlphaBeta::search(
         state->get_legal_actions();
     }
 
-    int best_score = M_MAX;
+    int best_score = M_MAX - 10;
+    int move_index = 0;
+    int total_moves = (int)state->legal_actions.size();
 
     for(auto& action : state->legal_actions){
         State* next = state->next_state(action);
+
+        bool same = next->same_player_as_parent();
 
         int raw = eval_ctx(
             next,
@@ -123,20 +138,32 @@ SearchResult AlphaBeta::search(
             p
         );
 
-        int score = -raw;
+        int score;
+        if(same) score = raw;
+        else score = -raw;
 
         delete next;
 
         if(score > best_score){
+            // [ Hackathon TODO 4-2 ]
+            // keep this move if it is the best so far
             best_score = score;
             result.best_move = action;
+
+            if(p.report_partial && ctx.on_root_update){
+               ctx.on_root_update({result.best_move, best_score, depth, move_index + 1, total_moves});
+            }
         }
+        move_index++;
     }
 
     result.score = best_score;
     return result;
 }
 
+/*============================================================
+ * AlphaBeta — default_params / param_defs
+ *============================================================*/
 ParamMap AlphaBeta::default_params(){
     return {
         {"UseKPEval", "true"},

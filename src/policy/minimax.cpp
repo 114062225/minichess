@@ -145,23 +145,23 @@ SearchResult MiniMax::search(
 
         delete next;
 
-            if(score > best_score){
-                // [ Hackathon TODO 4-2 ]
-                // keep this move if it is the best so far
-                best_score = score;
-                result.best_move = action;
+        if(score > best_score){
+            // [ Hackathon TODO 4-2 ]
+            // keep this move if it is the best so far
+            best_score = score;
+            result.best_move = action;
 
-                if(p.report_partial && ctx.on_root_update){
-                   ctx.on_root_update({result.best_move, best_score, depth, move_index + 1, total_moves});
-                }
-            }  
+            if(p.report_partial && ctx.on_root_update){
+               ctx.on_root_update({result.best_move, best_score, depth, move_index + 1, total_moves});
+            }
+        }
         move_index++;
     }
 
     // [ Hackathon TODO 4-3 ]
     // update result and return
-        result.score = best_score;
-        return result;
+    result.score = best_score;
+    return result;
 } 
 
 

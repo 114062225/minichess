@@ -5,16 +5,6 @@
 
 class AlphaBeta {
 public:
-    static SearchResult search(
-        State* state,
-        int depth,
-        GameHistory& history,
-        SearchContext& ctx
-    );
-    static ParamMap default_params();
-    static std::vector<ParamDef> param_defs();
-
-private:
     static int eval_ctx(
         State* state,
         int depth,
@@ -25,4 +15,13 @@ private:
         SearchContext& ctx,
         const MMParams& p
     );
+    static SearchResult search(
+        State* state,
+        int depth,
+        GameHistory& history,
+        SearchContext& ctx
+    );
+    
+    static ParamMap default_params();
+    static std::vector<ParamDef> param_defs();
 };
